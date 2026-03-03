@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(__file__))
 
 from keygen import KeyGenerator, generate_keys
 from model import train_model, MNISTNet, ModelTrainer
-from ciphertext_inference import CiphertextInference, compare_plain_encrypted
+from ciphertext_inference import CiphertextInference, PlainInference, compare_inference
 from encrypt import Encryptor, Encoder
 import tenseal as ts
 import numpy as np
@@ -31,14 +31,16 @@ def step1_generate_keys():
     print("步骤1: 生成TenSEAL CKKS密钥")
     print("=" * 50)
 
+    os.makedirs("../keys", exist_ok=True)
+
     keygen = KeyGenerator(poly_modulus_degree=8192)
     keygen.generate()
 
     keygen.save_keys(
-        public_key_path="./keys/public_key.bin",
-        secret_key_path="./keys/secret_key.bin",
-        context_path="./keys/context.bin",
-        galois_keys_path="./keys/galois_keys.bin",
+        public_key_path="../keys/public_key.bin",
+        secret_key_path="../keys/secret_key.bin",
+        context_path="../keys/context.bin",
+        galois_keys_path="../keys/galois_keys.bin",
     )
 
     print("✓ 密钥生成完成")
@@ -66,9 +68,9 @@ def step3_test_inference():
     print("步骤3: 测试明文与密文推理一致性")
     print("=" * 50)
 
-    context = KeyGenerator.load_context("./keys/context.bin")
+    context = KeyGenerator.load_context("../keys/context.bin")
 
-    model = torch.load("./models/mnist_net.pth", map_location="cpu")
+    model = torch.load("../models/mnist_net.pth", map_location="cpu")
     if hasattr(model, "state_dict"):
         weights = model.state_dict()
     else:
@@ -76,7 +78,8 @@ def step3_test_inference():
 
     inference = CiphertextInference(context, weights)
 
-    test_data = np.random.randn(784)
+    # 使用MNIST格式的测试数据（归一化到0-1）
+    test_data = np.random.rand(784).astype(np.float64)
 
     plain_pred, plain_probs = inference.predict_plain(test_data)
 
