@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基于同态加密的手写数字识别</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-item .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .status-item .value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .status-item .value.error {
+            color: #dc3545;
+        }
+        
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        #drawCanvas {
+            background: white;
+            cursor: crosshair;
+            border-radius: 5px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result-section.show {
+            display: block;
+        }
+        
+        .result-title {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .prediction-result {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .probabilities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .prob-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 60px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .prob-item .digit {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .prob-item .prob {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .explanation {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+        }
+        
+        .explanation h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        
+        .explanation ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+        
+        .explanation li {
+            margin: 5px 0;
+        }
+        
+        .key-download {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .key-download a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        .key-download a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 基于同态加密的手写数字识别</h1>
+            <p>使用TenSEAL CKKS同态加密技术保护您的隐私</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="label">模型状态</div>
+                    <div class="value" id="modelStatus">加载中...</div>
+                </div>
+                <div class="status-item">
+                    <div class="label">密钥状态</div>
+                    <div class="value" id="keyStatus">加载中...</div>
+                </div>
+                <div class="status-item">
+                    <div class="label">加密方案</div>
+                    <div class="value">CKKS</div>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="drawCanvas" width="280" height="280"></canvas>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="clearCanvas()">🗑️ 清除</button>
+                    <button class="btn-primary" onclick="predictEncrypted()">🔒 密文预测</button>
+                    <button class="btn-success" onclick="predictPlain()">🔓 明文预测</button>
+                </div>
+                
+                <div class="key-download">
+                    <button class="btn-secondary" onclick="generateNewKeys()">🔑 生成新密钥</button>
+                    <br><br>
+                    <a href="/api/download-key/public" download>下载公钥</a>
+                    <a href="/api/download-key/secret" download>下载私钥</a>
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>正在进行密文计算，请稍候...</p>
+            </div>
+            
+            <div class="result-section" id="resultSection">
+                <div class="result-title">预测结果</div>
+                <div class="prediction-result" id="predictionResult">-</div>
+                <div class="probabilities" id="probabilities"></div>
+            </div>
+            
+            <div class="explanation">
+                <h3>💡 系统说明</h3>
+                <ul>
+                    <li><strong>密文预测</strong>：您的图片数据将被加密后发送到服务器，服务器在密文状态下完成推理，仅返回预测结果</li>
+                    <li><strong>明文预测</strong>：图片数据以明文形式发送，用于对比演示</li>
+                    <li><strong>技术方案</strong>：使用TenSEAL库的CKKS同态加密方案，支持加法和乘法同态运算</li>
+                    <li><strong>神经网络</strong>：784→256→128→10的全连接网络</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        });
+        
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mouseout', () => isDrawing = false);
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+        
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('resultSection').classList.remove('show');
+        }
+        
+        function getImageData() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 28;
+            tempCanvas.height = 28;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0, 28, 28);
+            
+            const imageData = tempCtx.getImageData(0, 0, 28, 28);
+            const data = [];
+            
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const avg = (imageData.data[i] + imageData.data[i+1] + imageData.data[i+2]) / 3;
+                data.push(255 - avg);
+            }
+            
+            return data;
+        }
+        
+        function showResult(prediction, probabilities) {
+            document.getElementById('predictionResult').textContent = prediction;
+            
+            const probContainer = document.getElementById('probabilities');
+            probContainer.innerHTML = '';
+            
+            for (let i = 0; i < probabilities.length; i++) {
+                const prob = probabilities[i];
+                const item = document.createElement('div');
+                item.className = 'prob-item';
+                item.innerHTML = `
+                    <div class="digit">${i}</div>
+                    <div class="prob">${(prob * 100).toFixed(1)}%</div>
+                `;
+                probContainer.appendChild(item);
+            }
+            
+            document.getElementById('resultSection').classList.add('show');
+        }
+        
+        async function predictEncrypted() {
+            const imageData = getImageData();
+            
+            document.getElementById('loading').classList.add('show');
+            
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({image: imageData})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult(result.prediction, result.probabilities);
+                } else {
+                    alert('预测失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('请求失败: ' + error.message);
+            }
+            
+            document.getElementById('loading').classList.remove('show');
+        }
+        
+        async function predictPlain() {
+            const imageData = getImageData();
+            
+            document.getElementById('loading').classList.add('show');
+            
+            try {
+                const response = await fetch('/api/predict-plain', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({image: imageData})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult(result.prediction, result.probabilities);
+                } else {
+                    alert('预测失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('请求失败: ' + error.message);
+            }
+            
+            document.getElementById('loading').classList.remove('show');
+        }
+        
+        async function generateNewKeys() {
+            try {
+                const response = await fetch('/api/generate-keys', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('密钥生成成功！请重新下载新的密钥文件。');
+                } else {
+                    alert('密钥生成失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('请求失败: ' + error.message);
+            }
+        }
+        
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                const modelStatus = document.getElementById('modelStatus');
+                const keyStatus = document.getElementById('keyStatus');
+                
+                if (status.model_loaded) {
+                    modelStatus.textContent = '已加载';
+                    modelStatus.classList.remove('error');
+                } else {
+                    modelStatus.textContent = '未加载';
+                    modelStatus.classList.add('error');
+                }
+                
+                if (status.context_loaded) {
+                    keyStatus.textContent = '已加载';
+                    keyStatus.classList.remove('error');
+                } else {
+                    keyStatus.textContent = '未加载';
+                    keyStatus.classList.add('error');
+                }
+            } catch (error) {
+                console.error('状态检查失败:', error);
+            }
+        }
+        
+        checkStatus();
+    </script>
+</body>
+</html>

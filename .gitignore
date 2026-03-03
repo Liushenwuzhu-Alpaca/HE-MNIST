@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv/
+
+# PyTorch
+*.pth
+*.pt
+
+# Keys and sensitive data
+keys/
+*.bin
+
+# Data
+data/mnist/
+MNIST/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Conda
+*.conda/
