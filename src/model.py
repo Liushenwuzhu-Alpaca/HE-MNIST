@@ -119,60 +119,24 @@ class ModelTrainer:
         batch_size: int = 64,
         download: bool = True,
     ):
-        """加载MNIST数据集 - 使用sklearn数据集"""
-        try:
-            from sklearn.datasets import fetch_openml
-            from sklearn.model_selection import train_test_split
+        """加载MNIST数据集"""
+        transform = transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+        )
 
-            print("正在加载MNIST数据集...")
-            mnist = fetch_openml("mnist_784", version=1, as_frame=False, parser="auto")
-            X = mnist.data.astype(np.float32) / 255.0
-            y = mnist.target.astype(np.int64)
+        train_dataset = torchvision.datasets.MNIST(
+            root=data_dir, train=True, download=download, transform=transform
+        )
+        test_dataset = torchvision.datasets.MNIST(
+            root=data_dir, train=False, download=download, transform=transform
+        )
 
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=10000, random_state=42
-            )
-
-            X_train_tensor = torch.from_numpy(X_train).float()
-            y_train_tensor = torch.from_numpy(y_train).long()
-            X_test_tensor = torch.from_numpy(X_test).float()
-            y_test_tensor = torch.from_numpy(y_test).long()
-
-            train_dataset = torch.utils.data.TensorDataset(
-                X_train_tensor, y_train_tensor
-            )
-            test_dataset = torch.utils.data.TensorDataset(X_test_tensor, y_test_tensor)
-
-            self.train_loader = DataLoader(
-                train_dataset, batch_size=batch_size, shuffle=True
-            )
-            self.test_loader = DataLoader(
-                test_dataset, batch_size=batch_size, shuffle=False
-            )
-
-            print(f"训练集: {len(X_train)} 样本, 测试集: {len(X_test)} 样本")
-
-        except Exception as e:
-            print(f"sklearn加载失败: {e}")
-            print("尝试使用torchvision...")
-
-            transform = transforms.Compose(
-                [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-            )
-
-            train_dataset = torchvision.datasets.MNIST(
-                root=data_dir, train=True, download=download, transform=transform
-            )
-            test_dataset = torchvision.datasets.MNIST(
-                root=data_dir, train=False, download=download, transform=transform
-            )
-
-            self.train_loader = DataLoader(
-                train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
-            )
-            self.test_loader = DataLoader(
-                test_dataset, batch_size=batch_size, shuffle=False, num_workers=0
-            )
+        self.train_loader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
+        )
+        self.test_loader = DataLoader(
+            test_dataset, batch_size=batch_size, shuffle=False, num_workers=0
+        )
 
         return self.train_loader, self.test_loader
 
