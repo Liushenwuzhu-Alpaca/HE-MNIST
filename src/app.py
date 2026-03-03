@@ -17,7 +17,7 @@ from keygen import KeyGenerator
 from ciphertext_inference import CiphertextInference
 from encrypt import Encoder
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="../templates")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 CONTEXT_PATH = "./keys/context.bin"
