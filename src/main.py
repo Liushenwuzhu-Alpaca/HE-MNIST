@@ -31,16 +31,16 @@ def step1_generate_keys():
     print("步骤1: 生成TenSEAL CKKS密钥")
     print("=" * 50)
 
-    os.makedirs("../keys", exist_ok=True)
+    os.makedirs("keys", exist_ok=True)
 
     keygen = KeyGenerator(poly_modulus_degree=8192)
     keygen.generate()
 
     keygen.save_keys(
-        public_key_path="../keys/public_key.bin",
-        secret_key_path="../keys/secret_key.bin",
-        context_path="../keys/context.bin",
-        galois_keys_path="../keys/galois_keys.bin",
+        public_key_path="keys/public_key.bin",
+        secret_key_path="keys/secret_key.bin",
+        context_path="keys/context.bin",
+        galois_keys_path="keys/galois_keys.bin",
     )
 
     print("✓ 密钥生成完成")
@@ -68,9 +68,9 @@ def step3_test_inference():
     print("步骤3: 测试明文与密文推理一致性")
     print("=" * 50)
 
-    context = KeyGenerator.load_context("../keys/context.bin")
+    context = KeyGenerator.load_context("keys/context.bin", "keys/secret_key.bin")
 
-    model = torch.load("../models/mnist_net.pth", map_location="cpu")
+    model = torch.load("models/mnist_net.pth", map_location="cpu")
     if hasattr(model, "state_dict"):
         weights = model.state_dict()
     else:

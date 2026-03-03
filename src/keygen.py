@@ -4,6 +4,7 @@
 
 import tenseal as ts
 import os
+import json
 
 
 class KeyGenerator:
@@ -11,22 +12,28 @@ class KeyGenerator:
 
     def __init__(
         self,
-        poly_modulus_degree: int = 8192,
+        poly_modulus_degree: int = 16384,
         coeff_mod_bit_sizes: list = None,
         global_scale: int = 2**40,
     ):
         self.poly_modulus_degree = poly_modulus_degree
-        self.coeff_mod_bit_sizes = coeff_mod_bit_sizes or [60, 40, 40, 60]
+        self.coeff_mod_bit_sizes = coeff_mod_bit_sizes
         self.global_scale = global_scale
         self.context = None
 
     def generate(self):
         """生成CKKS密钥上下文和密钥对"""
-        self.context = ts.context(
-            ts.SCHEME_TYPE.CKKS,
-            self.poly_modulus_degree,
-            coeff_mod_bit_sizes=self.coeff_mod_bit_sizes,
-        )
+        if self.coeff_mod_bit_sizes:
+            self.context = ts.context(
+                ts.SCHEME_TYPE.CKKS,
+                self.poly_modulus_degree,
+                coeff_mod_bit_sizes=self.coeff_mod_bit_sizes,
+            )
+        else:
+            self.context = ts.context(
+                ts.SCHEME_TYPE.CKKS,
+                self.poly_modulus_degree,
+            )
 
         self.context.global_scale = self.global_scale
         self.context.auto_rescale = True
@@ -40,6 +47,14 @@ class KeyGenerator:
             raise ValueError("密钥上下文未生成")
         return self.context.serialize()
 
+    def get_params(self) -> dict:
+        """获取密钥生成参数"""
+        return {
+            "poly_modulus_degree": self.poly_modulus_degree,
+            "coeff_mod_bit_sizes": self.coeff_mod_bit_sizes,
+            "global_scale": self.global_scale,
+        }
+
     def save_keys(
         self,
         public_key_path: str,
@@ -47,13 +62,7 @@ class KeyGenerator:
         context_path: str = None,
         galois_keys_path: str = None,
     ):
-        """保存密钥到文件 - 保存整个context"""
-        if context_path:
-            with open(context_path, "wb") as f:
-                f.write(self.get_context_bytes())
-            print(f"密钥上下文已保存: {context_path}")
-
-        # 创建不含私钥的公开context
+        """保存密钥到文件"""
         public_context = self.context.copy()
         public_context.make_context_public()
 
@@ -61,16 +70,40 @@ class KeyGenerator:
             f.write(public_context.serialize())
         print(f"公钥已保存: {public_key_path}")
 
-        # 保存含私钥的完整context
         with open(secret_key_path, "wb") as f:
-            f.write(self.get_context_bytes())
+            f.write(self.context.serialize())
         print(f"私钥已保存: {secret_key_path}")
 
+        if context_path:
+            with open(context_path, "wb") as f:
+                f.write(public_context.serialize())
+            print(f"密钥上下文已保存: {context_path}")
+
+        params_path = os.path.join(os.path.dirname(context_path), "params.json")
+        with open(params_path, "w") as f:
+            json.dump(self.get_params(), f)
+        print(f"参数已保存: {params_path}")
+
     @staticmethod
-    def load_context(context_path: str) -> ts.Context:
-        """从文件加载密钥上下文（含私钥）"""
+    def load_context(context_path: str, secret_key_path: str = None) -> ts.Context:
+        """从文件加载密钥上下文 - 使用参数重新生成"""
+        params_path = os.path.join(os.path.dirname(context_path), "params.json")
+
+        if os.path.exists(params_path):
+            with open(params_path, "r") as f:
+                params = json.load(f)
+
+            keygen = KeyGenerator(
+                poly_modulus_degree=params["poly_modulus_degree"],
+                coeff_mod_bit_sizes=params["coeff_mod_bit_sizes"],
+                global_scale=params["global_scale"],
+            )
+            keygen.generate()
+            return keygen.context
+
         with open(context_path, "rb") as f:
-            return ts.context_from(f.read())
+            ctx = ts.context_from(f.read())
+        return ctx
 
     @staticmethod
     def load_public_context(public_key_path: str) -> ts.Context:
