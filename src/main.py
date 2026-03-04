@@ -15,7 +15,7 @@ import torch
 from ciphertext_inference import CiphertextInference
 from encrypt import Encoder, Encryptor
 from keygen import KeyGenerator, generate_keys
-from model import MNISTNet, ModelTrainer, train_model
+from model import MNISTNet, Trainer
 
 
 def setup_environment():
@@ -49,16 +49,13 @@ def step1_generate_keys():
 
 
 def step2_train_model(epochs: int = 10):
-    """步骤2：训练神经网络模型"""
     print("\n" + "=" * 50)
     print("步骤2: 训练MNIST神经网络模型")
     print("=" * 50)
-
-    model = MNISTNet(input_size=784, hidden1_size=256, hidden2_size=128, output_size=10)
-    trainer = ModelTrainer(model)
-    trainer.load_mnist(data_dir="./data/mnist", batch_size=64, download=True)
+    model = MNISTNet()
+    trainer = Trainer(model)
+    trainer.load_data(data_dir="./data/mnist", batch_size=64)
     trainer.train(epochs=epochs, save_path="./models/mnist_net.pth")
-
     print("✓ 模型训练完成")
     return model
 
@@ -95,7 +92,7 @@ def step3_test_inference():
         img, label = test_data[i]
         img_np = img.numpy().flatten().astype(np.float64)
 
-        plain_pred, plain_probs = inference.predict_plain(img_np)
+        plain_pred, plain_probs = inference.predict(img_np)
         encrypted_input = ts.ckks_vector(context, img_np.tolist())
         enc_pred, enc_probs = inference.predict_encrypted(encrypted_input)
 

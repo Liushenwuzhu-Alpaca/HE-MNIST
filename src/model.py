@@ -1,255 +1,69 @@
 """
-神经网络模型模块 - PyTorch全连接网络用于MNIST手写数字识别
+神经网络模型 - 使用square激活函数
 """
 
-import json
 import os
-
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 
 class MNISTNet(nn.Module):
-    """用于MNIST手写数字识别的全连接神经网络 - 使用平方激活函数"""
+    def __init__(self, input_size=784, hidden1=256, hidden2=128, output=10):
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, hidden1)
+        self.fc2 = nn.Linear(hidden1, hidden2)
+        self.fc3 = nn.Linear(hidden2, output)
 
-    def __init__(
-        self,
-        input_size: int = 784,
-        hidden1_size: int = 256,
-        hidden2_size: int = 128,
-        output_size: int = 10,
-    ):
-        """
-        初始化网络结构
-
-        Args:
-            input_size: 输入维度 (MNIST 28x28 = 784)
-            hidden1_size: 第一隐藏层维度
-            hidden2_size: 第二隐藏层维度
-            output_size: 输出维度 (数字0-9)
-        """
-        super(MNISTNet, self).__init__()
-
-        self.fc1 = nn.Linear(input_size, hidden1_size)
-        self.fc2 = nn.Linear(hidden1_size, hidden2_size)
-        self.fc3 = nn.Linear(hidden2_size, output_size)
-
-    def square_activation(self, x: torch.Tensor) -> torch.Tensor:
-        """平方激活函数: f(x) = x^2"""
-        return x**2
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """前向传播"""
+    def forward(self, x):
         x = x.view(x.size(0), -1)
-
-        x = self.fc1(x)
-        x = self.square_activation(x)
-
-        x = self.fc2(x)
-        x = self.square_activation(x)
-
-        x = self.fc3(x)
-
-        return x
-
-    def get_weights(self) -> dict:
-        """
-        获取模型权重
-
-        Returns:
-            包含所有权重和偏置的字典
-        """
-        weights = {}
-        for name, param in self.named_parameters():
-            weights[name] = param.detach().cpu().numpy()
-        return weights
-
-    def set_weights(self, weights: dict):
-        """
-        设置模型权重
-
-        Args:
-            weights: 权重字典
-        """
-        for name, param in self.named_parameters():
-            if name in weights:
-                param.data = torch.from_numpy(weights[name]).float()
-
-    def get_weight_matrix(self, layer_name: str) -> np.ndarray:
-        """获取指定层的权重矩阵"""
-        return self.state_dict()[layer_name + ".weight"].cpu().numpy()
-
-    def get_bias_vector(self, layer_name: str) -> np.ndarray:
-        """获取指定层的偏置向量"""
-        return self.state_dict()[layer_name + ".bias"].cpu().numpy()
+        x = self.fc1(x) ** 2
+        x = self.fc2(x) ** 2
+        return self.fc3(x)
 
 
-class ModelTrainer:
-    """模型训练器"""
-
-    def __init__(
-        self, model: nn.Module, learning_rate: float = 0.001, device: str = None
-    ):
-        """
-        初始化训练器
-
-        Args:
-            model: 神经网络模型
-            learning_rate: 学习率
-            device: 计算设备
-        """
+class Trainer:
+    def __init__(self, model, lr=0.001):
         self.model = model
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
-
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        model.to(self.device)
+        self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    def load_mnist(
-        self,
-        data_dir: str = "./data/mnist",
-        batch_size: int = 64,
-        download: bool = True,
-    ):
-        """加载MNIST数据集"""
-        transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-        )
+    def load_data(self, data_dir="./data/mnist", batch_size=64):
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+        self.train_loader = DataLoader(torchvision.datasets.MNIST(root=data_dir, train=True, download=True, transform=transform), batch_size=batch_size, shuffle=True)
+        self.test_loader = DataLoader(torchvision.datasets.MNIST(root=data_dir, train=False, download=True, transform=transform), batch_size=batch_size)
 
-        train_dataset = torchvision.datasets.MNIST(
-            root=data_dir, train=True, download=download, transform=transform
-        )
-        test_dataset = torchvision.datasets.MNIST(
-            root=data_dir, train=False, download=download, transform=transform
-        )
+    def train(self, epochs, save_path="./models/mnist_net.pth"):
+        for epoch in range(1, epochs + 1):
+            self.model.train()
+            for data, target in self.train_loader:
+                data, target = data.to(self.device), target.to(self.device)
+                self.optimizer.zero_grad()
+                loss = self.criterion(self.model(data), target)
+                loss.backward()
+                self.optimizer.step()
+            acc = self.evaluate()
+            print(f"Epoch {epoch}/{epochs}: 准确率 {acc:.2f}%")
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        torch.save(self.model.state_dict(), save_path)
 
-        self.train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
-        )
-        self.test_loader = DataLoader(
-            test_dataset, batch_size=batch_size, shuffle=False, num_workers=0
-        )
-
-        return self.train_loader, self.test_loader
-
-    def train_epoch(self) -> float:
-        """训练一个epoch"""
-        self.model.train()
-        total_loss = 0
-
-        for batch_idx, (data, target) in enumerate(self.train_loader):
-            data, target = data.to(self.device), target.to(self.device)
-
-            self.optimizer.zero_grad()
-            output = self.model(data)
-            loss = self.criterion(output, target)
-            loss.backward()
-            self.optimizer.step()
-
-            total_loss += loss.item()
-
-            if batch_idx % 100 == 0:
-                print(
-                    f"  Batch {batch_idx}/{len(self.train_loader)}, Loss: {loss.item():.4f}"
-                )
-
-        return total_loss / len(self.train_loader)
-
-    def evaluate(self) -> tuple:
-        """评估模型"""
+    def evaluate(self):
         self.model.eval()
         correct = 0
-        total = 0
-        test_loss = 0
-
         with torch.no_grad():
             for data, target in self.test_loader:
                 data, target = data.to(self.device), target.to(self.device)
-                output = self.model(data)
-                test_loss += self.criterion(output, target).item()
-                _, predicted = torch.max(output.data, 1)
-                total += target.size(0)
-                correct += (predicted == target).sum().item()
-
-        accuracy = 100 * correct / total
-        avg_loss = test_loss / len(self.test_loader)
-
-        return accuracy, avg_loss
-
-    def train(self, epochs, save_path: str = "./models/mnist_net.pth"):
-        """
-        训练模型
-
-        Args:
-            epochs: 训练轮数
-            save_path: 模型保存路径
-        """
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-
-        print(f"开始训练，设备: {self.device}")
-        print(f"训练轮数: {epochs}")
-
-        for epoch in range(1, epochs + 1):
-            print(f"\nEpoch {epoch}/{epochs}")
-
-            avg_loss = self.train_epoch()
-            accuracy, test_loss = self.evaluate()
-
-            print(f"  训练损失: {avg_loss:.4f}")
-            print(f"  测试损失: {test_loss:.4f}")
-            print(f"  准确率: {accuracy:.2f}%")
-
-        torch.save(self.model.state_dict(), save_path)
-        print(f"\n模型已保存至: {save_path}")
-
-        return self.model
-
-    def load(self, load_path: str):
-        """加载模型"""
-        self.model.load_state_dict(torch.load(load_path, map_location=self.device))
-        return self.model
-
-
-def train_model(epochs: int, save_path: str = "./models/mnist_net.pth"):
-    """
-    便捷函数：训练MNIST模型
-
-    Args:
-        epochs: 训练轮数
-        save_path: 模型保存路径
-    """
-    model = MNISTNet()
-    trainer = ModelTrainer(model)
-    trainer.load_mnist()
-    trainer.train(epochs=epochs, save_path=save_path)
-    return model
-
-
-def get_model_weights(model: nn.Module) -> dict:
-    """
-    便捷函数：获取模型权重
-
-    Args:
-        model: 神经网络模型
-
-    Returns:
-        权重字典
-    """
-    weights = {}
-    for name, param in model.named_parameters():
-        weights[name] = param.detach().cpu().numpy()
-    return weights
-
-
-def create_model() -> MNISTNet:
-    """创建模型实例"""
-    return MNISTNet()
+                pred = self.model(data).argmax(1)
+                correct += (pred == target).sum().item()
+        return 100 * correct / len(self.test_loader.dataset)
 
 
 if __name__ == "__main__":
-    train_model(epochs=10)
+    model = MNISTNet()
+    trainer = Trainer(model)
+    trainer.load_data()
+    trainer.train(epochs=10)
