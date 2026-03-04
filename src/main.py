@@ -118,7 +118,7 @@ def step4_demo():
 
     from app import app
 
-    app.run(debug=False, host="0.0.0.0", port=5001)
+    app.run(debug=False, host="0.0.0.0", port=5000)
 
 
 def run_full_pipeline(epochs: int = 10):

@@ -169,7 +169,7 @@ def predict_plain():
         encoder = Encoder()
         encoded_input = encoder.encode_image(image_array)
 
-        prediction, probabilities = inference_engine.predict_plain(encoded_input)
+        prediction, probabilities = inference_engine.predict(encoded_input)
 
         return jsonify(
             {
@@ -196,4 +196,4 @@ def status():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, host="0.0.0.0", port=5000)

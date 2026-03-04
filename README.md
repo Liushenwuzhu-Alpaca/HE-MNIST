@@ -54,7 +54,7 @@ python main.py
 python src/main.py --demo
 ```
 
-访问 http://localhost:5001
+访问 http://localhost:5000
 
 ## 项目结构
 
