@@ -2,19 +2,20 @@
 神经网络模型模块 - PyTorch全连接网络用于MNIST手写数字识别
 """
 
+import json
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
 import torchvision
 import torchvision.transforms as transforms
-import numpy as np
-import os
-import json
+from torch.utils.data import DataLoader
 
 
 class MNISTNet(nn.Module):
-    """用于MNIST手写数字识别的全连接神经网络"""
+    """用于MNIST手写数字识别的全连接神经网络 - 使用平方激活函数"""
 
     def __init__(
         self,
@@ -35,26 +36,22 @@ class MNISTNet(nn.Module):
         super(MNISTNet, self).__init__()
 
         self.fc1 = nn.Linear(input_size, hidden1_size)
-        self.relu1 = nn.ReLU()
-        self.dropout1 = nn.Dropout(0.2)
-
         self.fc2 = nn.Linear(hidden1_size, hidden2_size)
-        self.relu2 = nn.ReLU()
-        self.dropout2 = nn.Dropout(0.2)
-
         self.fc3 = nn.Linear(hidden2_size, output_size)
+
+    def square_activation(self, x: torch.Tensor) -> torch.Tensor:
+        """平方激活函数: f(x) = x^2"""
+        return x**2
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """前向传播"""
         x = x.view(x.size(0), -1)
 
         x = self.fc1(x)
-        x = self.relu1(x)
-        x = self.dropout1(x)
+        x = self.square_activation(x)
 
         x = self.fc2(x)
-        x = self.relu2(x)
-        x = self.dropout2(x)
+        x = self.square_activation(x)
 
         x = self.fc3(x)
 
@@ -184,7 +181,7 @@ class ModelTrainer:
 
         return accuracy, avg_loss
 
-    def train(self, epochs: int = 10, save_path: str = "./models/mnist_net.pth"):
+    def train(self, epochs, save_path: str = "./models/mnist_net.pth"):
         """
         训练模型
 
@@ -218,7 +215,7 @@ class ModelTrainer:
         return self.model
 
 
-def train_model(epochs: int = 10, save_path: str = "./models/mnist_net.pth"):
+def train_model(epochs: int, save_path: str = "./models/mnist_net.pth"):
     """
     便捷函数：训练MNIST模型
 
@@ -255,4 +252,4 @@ def create_model() -> MNISTNet:
 
 
 if __name__ == "__main__":
-    train_model(epochs=5)
+    train_model(epochs=10)

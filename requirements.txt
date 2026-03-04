@@ -1,4 +1,6 @@
 tenseal==0.3.15
+Pyfhel
+python-paillier
 torch>=2.0.0
 torchvision>=0.15.0
 flask>=2.0.0

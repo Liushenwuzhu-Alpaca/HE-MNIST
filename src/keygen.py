@@ -12,9 +12,9 @@ class KeyGenerator:
 
     def __init__(
         self,
-        poly_modulus_degree: int = 16384,
-        coeff_mod_bit_sizes: list = None,
-        global_scale: int = 2**40,
+        poly_modulus_degree: int = 8192,
+        coeff_mod_bit_sizes: list = [40, 21, 21, 21, 21, 21, 21, 40],
+        global_scale: int = 2**21,
     ):
         self.poly_modulus_degree = poly_modulus_degree
         self.coeff_mod_bit_sizes = coeff_mod_bit_sizes
@@ -27,7 +27,8 @@ class KeyGenerator:
             self.context = ts.context(
                 ts.SCHEME_TYPE.CKKS,
                 self.poly_modulus_degree,
-                coeff_mod_bit_sizes=self.coeff_mod_bit_sizes,
+                -1,  # plain_modulus
+                self.coeff_mod_bit_sizes,
             )
         else:
             self.context = ts.context(
@@ -38,6 +39,7 @@ class KeyGenerator:
         self.context.global_scale = self.global_scale
         self.context.auto_rescale = True
         self.context.generate_galois_keys()
+        self.context.generate_relin_keys()
 
         return self.context
 

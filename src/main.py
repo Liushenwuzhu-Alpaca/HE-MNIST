@@ -2,19 +2,20 @@
 主程序 - 基于同态加密的手写数字识别
 """
 
+import argparse
 import os
 import sys
-import argparse
 
 sys.path.append(os.path.dirname(__file__))
 
-from keygen import KeyGenerator, generate_keys
-from model import train_model, MNISTNet, ModelTrainer
-from ciphertext_inference import CiphertextInference, PlainInference, compare_inference
-from encrypt import Encryptor, Encoder
-import tenseal as ts
 import numpy as np
+import tenseal as ts
 import torch
+
+from ciphertext_inference import CiphertextInference
+from encrypt import Encoder, Encryptor
+from keygen import KeyGenerator, generate_keys
+from model import MNISTNet, ModelTrainer, train_model
 
 
 def setup_environment():
@@ -68,7 +69,7 @@ def step3_test_inference():
     print("步骤3: 测试明文与密文推理一致性")
     print("=" * 50)
 
-    context = KeyGenerator.load_context("keys/context.bin", "keys/secret_key.bin")
+    context = KeyGenerator.load_context("keys/context.bin")
 
     model = torch.load("models/mnist_net.pth", map_location="cpu")
     if hasattr(model, "state_dict"):
@@ -78,21 +79,35 @@ def step3_test_inference():
 
     inference = CiphertextInference(context, weights)
 
-    # 使用MNIST格式的测试数据（归一化到0-1）
-    test_data = np.random.rand(784).astype(np.float64)
+    # 使用MNIST测试数据
+    from torchvision import datasets, transforms
 
-    plain_pred, plain_probs = inference.predict_plain(test_data)
+    transform = transforms.ToTensor()
+    test_data = datasets.MNIST(
+        root="./data/mnist", train=False, download=True, transform=transform
+    )
 
-    encrypted_input = ts.ckks_vector(context, test_data.tolist())
-    enc_pred, enc_probs = inference.predict_encrypted(encrypted_input)
+    correct_plain = 0
+    correct_enc = 0
+    total = 10
 
-    print(f"\n明文预测: {plain_pred}")
-    print(f"密文预测: {enc_pred}")
-    print(f"明文概率: {plain_probs}")
-    print(f"密文概率: {enc_probs}")
-    print(f"\n预测一致: {plain_pred == enc_pred}")
-    print(f"概率最大误差: {np.max(np.abs(plain_probs - enc_probs))}")
+    for i in range(total):
+        img, label = test_data[i]
+        img_np = img.numpy().flatten().astype(np.float64)
 
+        plain_pred, plain_probs = inference.predict_plain(img_np)
+        encrypted_input = ts.ckks_vector(context, img_np.tolist())
+        enc_pred, enc_probs = inference.predict_encrypted(encrypted_input)
+
+        if plain_pred == label:
+            correct_plain += 1
+        if enc_pred == label:
+            correct_enc += 1
+
+        print(f"样本{i}: 真实={label}, 明文={plain_pred}, 密文={enc_pred}")
+
+    print(f"\n明文准确率: {correct_plain}/{total}")
+    print(f"密文准确率: {correct_enc}/{total}")
     print("\n✓ 密文推理测试完成")
 
 
@@ -106,7 +121,7 @@ def step4_demo():
 
     from app import app
 
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5001)
 
 
 def run_full_pipeline(epochs: int = 10):

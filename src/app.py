@@ -2,20 +2,21 @@
 Flask Web应用 - 基于同态加密的手写数字识别演示
 """
 
-from flask import Flask, render_template, request, jsonify, send_file
-import tenseal as ts
-import numpy as np
-import torch
-import io
 import base64
+import io
 import os
 import sys
 
+import numpy as np
+import tenseal as ts
+import torch
+from flask import Flask, jsonify, render_template, request, send_file
+
 sys.path.append(os.path.dirname(__file__))
 
-from keygen import KeyGenerator
 from ciphertext_inference import CiphertextInference
 from encrypt import Encoder
+from keygen import KeyGenerator
 
 app = Flask(__name__, template_folder="../templates")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
@@ -125,6 +126,9 @@ def predict():
 
         image_array = np.array(image_data, dtype=np.float64)
 
+        # 前端已经做了颜色反转(255-avg)，这里不需要再反转
+        # image_array = 1.0 - image_array
+
         encoder = Encoder()
         encoded_input = encoder.encode_image(image_array)
 
@@ -159,6 +163,9 @@ def predict_plain():
 
         image_array = np.array(image_data, dtype=np.float64)
 
+        # 前端已经做了颜色反转(255-avg)，这里不需要再反转
+        # image_array = 1.0 - image_array
+
         encoder = Encoder()
         encoded_input = encoder.encode_image(image_array)
 
@@ -189,4 +196,4 @@ def status():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5001)
