@@ -2,9 +2,10 @@
 密钥生成模块 - TenSEAL CKKS密钥上下文生成
 """
 
-import tenseal as ts
-import os
 import json
+import os
+
+import tenseal as ts
 
 
 class KeyGenerator:
@@ -16,6 +17,14 @@ class KeyGenerator:
         coeff_mod_bit_sizes: list = [40, 21, 21, 21, 21, 21, 21, 40],
         global_scale: int = 2**21,
     ):
+        """
+        初始化密钥生成器
+
+        Args:
+            poly_modulus_degree (int): 多项式模数度
+            coeff_mod_bit_sizes (list): 系数模数位数列表
+            global_scale (int): 全局缩放因子
+        """
         self.poly_modulus_degree = poly_modulus_degree
         self.coeff_mod_bit_sizes = coeff_mod_bit_sizes
         self.global_scale = global_scale
@@ -64,7 +73,15 @@ class KeyGenerator:
         context_path: str = None,
         galois_keys_path: str = None,
     ):
-        """保存密钥到文件"""
+        """
+        保存密钥到文件
+
+        Args:
+            public_key_path (str): 公钥保存路径
+            secret_key_path (str): 私钥保存路径
+            context_path (str): 密钥上下文保存路径
+            galois_keys_path (str): Galois密钥保存路径
+        """
         public_context = self.context.copy()
         public_context.make_context_public()
 
@@ -88,7 +105,16 @@ class KeyGenerator:
 
     @staticmethod
     def load_context(context_path: str, secret_key_path: str = None) -> ts.Context:
-        """从文件加载密钥上下文 - 使用参数重新生成"""
+        """
+        从文件加载密钥上下文 - 使用参数重新生成
+
+        Args:
+            context_path (str): 密钥上下文保存路径
+            secret_key_path (str): 私钥保存路径
+
+        Returns:
+            ts.Context: 加载的密钥上下文
+        """
         params_path = os.path.join(os.path.dirname(context_path), "params.json")
 
         if os.path.exists(params_path):
@@ -115,7 +141,13 @@ class KeyGenerator:
 
 
 def generate_keys(key_size: int = 8192, save_dir: str = "keys"):
-    """便捷函数：生成并保存密钥"""
+    """
+    便捷函数：生成并保存密钥
+
+    Args:
+        key_size (int): 多项式模数度
+        save_dir (str): 保存目录
+    """
     os.makedirs(save_dir, exist_ok=True)
 
     keygen = KeyGenerator(poly_modulus_degree=key_size)

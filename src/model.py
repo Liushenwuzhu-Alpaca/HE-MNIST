@@ -3,6 +3,7 @@
 """
 
 import os
+
 import torch
 import torch.nn as nn
 import torchvision
@@ -12,12 +13,30 @@ from torch.utils.data import DataLoader
 
 class MNISTNet(nn.Module):
     def __init__(self, input_size=784, hidden1=256, hidden2=128, output=10):
+        """
+        初始化模型
+
+        Args:
+            input_size (int): 输入大小
+            hidden1 (int): 隐藏层1大小
+            hidden2 (int): 隐藏层2大小
+            output (int): 输出大小
+        """
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden1)
         self.fc2 = nn.Linear(hidden1, hidden2)
         self.fc3 = nn.Linear(hidden2, output)
 
     def forward(self, x):
+        """
+        前向传播
+
+        Args:
+            x (torch.Tensor): 输入张量
+
+        Returns:
+            torch.Tensor: 输出张量
+        """
         x = x.view(x.size(0), -1)
         x = self.fc1(x) ** 2
         x = self.fc2(x) ** 2
@@ -26,6 +45,14 @@ class MNISTNet(nn.Module):
 
 class Trainer:
     def __init__(self, model, lr=0.001):
+        """
+        初始化训练器
+
+        Args:
+            model (MNISTNet): 模型
+            lr (float): 学习率
+        """
+
         self.model = model
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         model.to(self.device)
@@ -33,11 +60,39 @@ class Trainer:
         self.criterion = nn.CrossEntropyLoss()
 
     def load_data(self, data_dir="./data/mnist", batch_size=64):
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-        self.train_loader = DataLoader(torchvision.datasets.MNIST(root=data_dir, train=True, download=True, transform=transform), batch_size=batch_size, shuffle=True)
-        self.test_loader = DataLoader(torchvision.datasets.MNIST(root=data_dir, train=False, download=True, transform=transform), batch_size=batch_size)
+        """
+        加载数据
+
+        Args:
+            data_dir (str): 数据目录
+            batch_size (int): 批大小
+        """
+        transform = transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+        )
+        self.train_loader = DataLoader(
+            torchvision.datasets.MNIST(
+                root=data_dir, train=True, download=True, transform=transform
+            ),
+            batch_size=batch_size,
+            shuffle=True,
+        )
+        self.test_loader = DataLoader(
+            torchvision.datasets.MNIST(
+                root=data_dir, train=False, download=True, transform=transform
+            ),
+            batch_size=batch_size,
+        )
 
     def train(self, epochs, save_path="./models/mnist_net.pth"):
+        """
+        训练模型
+
+        Args:
+            epochs (int): 训练轮数
+            save_path (str): 保存路径
+        """
+
         for epoch in range(1, epochs + 1):
             self.model.train()
             for data, target in self.train_loader:
@@ -52,6 +107,12 @@ class Trainer:
         torch.save(self.model.state_dict(), save_path)
 
     def evaluate(self):
+        """
+        评估模型
+
+        Returns:
+            float: 准确率
+        """
         self.model.eval()
         correct = 0
         with torch.no_grad():

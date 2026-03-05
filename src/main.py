@@ -49,6 +49,12 @@ def step1_generate_keys():
 
 
 def step2_train_model(epochs: int = 10):
+    """
+    步骤2：训练MNIST神经网络模型
+
+    Args:
+        epochs (int): 训练轮数
+    """
     print("\n" + "=" * 50)
     print("步骤2: 训练MNIST神经网络模型")
     print("=" * 50)

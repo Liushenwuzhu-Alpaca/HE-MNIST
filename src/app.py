@@ -100,7 +100,6 @@ def download_key(key_type):
     """下载密钥文件"""
     key_map = {
         "public": "./keys/public_key.bin",
-        "secret": "./keys/secret_key.bin",
         "context": "./keys/context.bin",
     }
 
@@ -108,6 +107,7 @@ def download_key(key_type):
     if not key_path or not os.path.exists(key_path):
         return jsonify({"error": "密钥文件不存在"}), 404
 
+    key_path = os.path.abspath(key_path)
     return send_file(key_path, as_attachment=True, download_name=f"{key_type}_key.bin")
 
 

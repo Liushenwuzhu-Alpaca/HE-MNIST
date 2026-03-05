@@ -5,45 +5,48 @@
 ## 项目简介
 
 本项目实现了一个**保护隐私的手写数字识别系统**：
+
 - 用户将手写数字图片加密后上传
 - 服务器在密文状态下完成神经网络推理
 - 仅返回预测结果（0-9），服务器无法获知原始图片内容
 
 ## 技术栈
 
-| 组件 | 技术 |
-|------|------|
+| 组件     | 技术         |
+| -------- | ------------ |
 | 同态加密 | TenSEAL CKKS |
-| 深度学习 | PyTorch |
-| Web框架 | Flask |
-| 数据集 | MNIST |
+| 深度学习 | PyTorch      |
+| Web框架  | Flask        |
+| 数据集   | MNIST        |
 
 ## 系统架构
 
 ```
 ┌──────────┐     ┌──────────────┐     ┌──────────────┐
-│  客户端   │     │    服务器    │     │   客户端    │
-│ 1.加密图片│────▶│ 2.密文推理   │────▶│ 4.解密结果  │
-│  (CKKS)  │     │ (神经网络)   │     │             │
+│  客户端  │     │    服务器    │     │   客户端     │
+│1.加密图片│────▶│ 2.密文推理   │────▶│ 3.解密结果   │
+│  (CKKS)  │     │ (神经网络)   │     │              │
 └──────────┘     └──────────────┘     └──────────────┘
 ```
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 创建虚拟环境
 
 ```bash
-pip install -r requirements.txt
+conda env create -f environment.yml
 ```
 
 ### 2. 运行完整流程
 
+请先解压位于data/mnist/MNIST/raw的压缩包
+
 ```bash
-cd src
-python main.py
+python src/main.py
 ```
 
 这将自动执行：
+
 1. 生成TenSEAL CKKS密钥
 2. 训练MNIST神经网络模型
 3. 测试明文/密文推理一致性
@@ -61,19 +64,21 @@ python src/main.py --demo
 ```
 HE-MNIST/
 ├── src/
-│   ├── __init__.py
-│   ├── keygen.py              # 密钥生成
+│   ├── keygen.py              # TenSEAL密钥上下文生成
 │   ├── encrypt.py             # 数据加密/解密
-│   ├── model.py               # 神经网络模型 (square激活)
+│   ├── model.py               # PyTorch神经网络定义与训练
 │   ├── ciphertext_inference.py # 密文推理
-│   ├── app.py                 # Flask Web应用
+│   ├── app.py                 # Flask Web界面
 │   └── main.py                # 主程序
+├── data/
+│   └── mnist/                 # MNIST数据集
+├── models/                    # 训练好的模型权重
 ├── templates/
-│   └── index.html             # Web界面
-├── models/                    # 训练好的模型
-├── keys/                      # 密钥文件
-├── data/                      # MNIST数据
-└── requirements.txt           # 依赖列表
+│   └── index.html             # Web界面模板
+├── report/
+│   └── report.md              # 课程报告
+├── environment.yml            # 环境信息
+└── README.md
 ```
 
 ## 核心实现
@@ -100,13 +105,16 @@ HE-MNIST/
 4. 重复至输出层
 5. 解密得到预测结果
 
-**注意**: 由于CKKS同态加密的特性，密文推理使用**平方函数(x²)**替代ReLU激活函数，这是encrypted-evaluation项目的标准做法。
+**注意**: 由于CKKS同态加密的特性，密文推理使用**平方函数(x²)**替代ReLU激活函数。
 
 ## 使用说明
 
 ### 命令行操作
 
 ```bash
+# 全过程演示
+python src/main.py
+
 # 仅生成密钥
 python src/main.py --step 1
 
@@ -135,7 +143,3 @@ python src/main.py --demo
 - [encrypted-evaluation项目](https://github.com/youben11/encrypted-evaluation)
 - [CKKS原理](https://eprint.iacr.org/2019/016)
 - [PyTorch MNIST教程](https://pytorch.org/tutorials/)
-
-## 许可证
-
-MIT License

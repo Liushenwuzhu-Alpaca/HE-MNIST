@@ -96,7 +96,6 @@ class Encoder:
 
         Returns:
             归一化后的数据
-        }
         """
         data_min = data.min()
         data_max = data.max()
